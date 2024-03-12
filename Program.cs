@@ -43,7 +43,7 @@ if (app.Environment.IsDevelopment())
      c.SwaggerEndpoint("/swagger/v1/swagger.json", "Course API V1");
  });
 }
-app.UseCors("Policy");
+app.UseCors();
 
 app.MapGet("/", () => "Hello Unibersity!");
 
@@ -95,9 +95,10 @@ app.MapPut("/api/user/{id}", async (int id, CourseDbContext context, User update
     return Results.Ok(user);
 });
 //get by id
-app.MapGet("/api/user/{id}", async (int id, CourseDbContext context) => {
+app.MapGet("/api/user/{id}", async (int id, CourseDbContext context) =>
+{
     var user = await context.Users.FindAsync(id);
-    if(user is null)
+    if (user is null)
         return Results.NotFound("קוד משתמש לא קיים");
     return Results.Ok(user);
 });
@@ -130,6 +131,14 @@ app.MapGet("/api/course", async (CourseDbContext context) =>
     var courses = await context.Courses.ToListAsync();
     return Results.Ok(courses);
 });
+//get course by id
+app.MapGet("/api/course/{id}", async (int id, CourseDbContext context) =>
+{
+    var course = await context.Courses.FindAsync(id);
+    if (course is null)
+        return Results.NotFound();
+    return Results.Ok(course);
+});
 
 //add course
 app.MapPost("/api/course", async (CourseDbContext context, Course courseToAdd) =>
@@ -158,10 +167,16 @@ app.MapPut("/api/course/{id}", async (int id, CourseDbContext context, Course ne
     var existCourse = await context.Courses.FindAsync(id);
     if (existCourse is null)
         return Results.NotFound();
-    mapper.Map(newCourse, existCourse);
-    var updated = context.Courses.Update(existCourse);
+    existCourse.Name = newCourse.Name;
+    existCourse.CategoryId = newCourse.CategoryId;
+    existCourse.ImgLink = newCourse.ImgLink;
+    existCourse.LearningType = newCourse.LearningType;
+    existCourse.LessonsAmount = newCourse.LessonsAmount;
+    existCourse.StartLearning = newCourse.StartLearning;
+    existCourse.Syllabus = newCourse.Syllabus;
+    context.Courses.Update(existCourse);
     await context.SaveChangesAsync();
-    return Results.Ok(updated);
+    return Results.Ok(existCourse);
 });
 
 //Sign up for a course
@@ -184,7 +199,7 @@ app.MapPost("/api/course/{courseId}", async (int courseId, CourseDbContext conte
 });
 
 //כל הקורסים של סטודנט/מרצה
-app.MapGet("/api/course/{id}", async (int id, CourseDbContext context) =>
+app.MapGet("/api/course/user/{id}", async (int id, CourseDbContext context) =>
 {
     var user = await context.Users.FindAsync(id);
     if (user is null)
