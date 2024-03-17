@@ -86,8 +86,12 @@ app.MapPut("/api/user/{id}", async (int id, CourseDbContext context, User update
     if (existingUserWithSameName is not null && existingUserWithSameName.Id != updateUser.Id)
         return Results.Conflict("שם משתמש כבר קיים");
 
-    // Update only the properties from the updateUser object to the user entity
-    mapper.Map(updateUser, user);
+    user.Name = updateUser.Name;
+    user.Address = updateUser.Address;
+    user.Email = updateUser.Email;
+    user.Password = updateUser.Password;
+    user.Role = updateUser.Role;
+
 
     context.Users.Update(user);
     await context.SaveChangesAsync();
@@ -204,14 +208,21 @@ app.MapGet("/api/course/user/{id}", async (int id, CourseDbContext context) =>
     var user = await context.Users.FindAsync(id);
     if (user is null)
         return Results.NotFound("קוד משתמש לא קיים");
-    var coursesByUserId = await context.Registrations
-        .Where(r => r.UserId == id)
-        .Join(context.Courses,
-            r => r.CourseId,
-            c => c.Id,
-            (r, c) => c)
-        .ToListAsync();
-
+    List<Course> coursesByUserId = new List<Course>();
+    if (user.Role == 0)
+    {
+        coursesByUserId = await context.Registrations
+            .Where(r => r.UserId == id)
+            .Join(context.Courses,
+                r => r.CourseId,
+                c => c.Id,
+                (r, c) => c)
+            .ToListAsync();
+    }
+    else
+    {
+        coursesByUserId = await context.Courses.Where(c => c.LecturerId == user.Id).ToListAsync();
+    }
     return Results.Ok(coursesByUserId);
 });
 app.Run();
